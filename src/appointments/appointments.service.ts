@@ -416,7 +416,20 @@ export class AppointmentsService {
       dto.discount !== undefined ||
       dto.manualPriceOverride !== undefined;
 
-    if (isStructuralChange && !EDITABLE_STATUSES.has(appt.status)) {
+    /** Doctor may append billing lines on completed visits (no time/doctor/patient/discount changes). */
+    const doctorCompletedServiceLinesOnly =
+      auth.role === UserRole.doctor &&
+      appt.status === AppointmentStatus.completed &&
+      appt.doctorId === auth.userId &&
+      dto.serviceIds !== undefined &&
+      dto.serviceId === undefined &&
+      dto.startTime === undefined &&
+      dto.doctorId === undefined &&
+      dto.patientId === undefined &&
+      dto.discount === undefined &&
+      dto.manualPriceOverride === undefined;
+
+    if (isStructuralChange && !EDITABLE_STATUSES.has(appt.status) && !doctorCompletedServiceLinesOnly) {
       throw new BadRequestException({
         message: `Cannot modify scheduling or pricing of an appointment in '${appt.status}' status`,
         code: 'APPOINTMENT_NOT_EDITABLE',
@@ -473,7 +486,7 @@ export class AppointmentsService {
 
     const updated = await this.prisma.$transaction(
       async (tx) => {
-        if (isStructuralChange) {
+        if (isStructuralChange && !doctorCompletedServiceLinesOnly) {
           await this.assertBookableSlotTx(tx, {
             tenantId: auth.tenantId,
             doctorId,
@@ -688,6 +701,9 @@ export class AppointmentsService {
     } else if (appt.status === AppointmentStatus.arrived) {
       message = `طلب من الطبيب (${doctorName}): إدخال المريض للمعاينة — ${patientName}`;
       actions = ['send_to_doctor', 'dismiss'];
+    } else if (appt.status === AppointmentStatus.completed) {
+      message = `طلب من الطبيب (${doctorName}): جاهز للتحصيل بعد مراجعة الفاتورة — ${patientName}`;
+      actions = ['dismiss'];
     } else {
       throw new BadRequestException({
         message: 'لا يوجد إجراء مطلوب من الاستقبال في هذه الحالة',

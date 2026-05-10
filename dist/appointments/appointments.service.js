@@ -355,7 +355,17 @@ let AppointmentsService = AppointmentsService_1 = class AppointmentsService {
             dto.patientId !== undefined ||
             dto.discount !== undefined ||
             dto.manualPriceOverride !== undefined;
-        if (isStructuralChange && !EDITABLE_STATUSES.has(appt.status)) {
+        const doctorCompletedServiceLinesOnly = auth.role === client_1.UserRole.doctor &&
+            appt.status === client_1.AppointmentStatus.completed &&
+            appt.doctorId === auth.userId &&
+            dto.serviceIds !== undefined &&
+            dto.serviceId === undefined &&
+            dto.startTime === undefined &&
+            dto.doctorId === undefined &&
+            dto.patientId === undefined &&
+            dto.discount === undefined &&
+            dto.manualPriceOverride === undefined;
+        if (isStructuralChange && !EDITABLE_STATUSES.has(appt.status) && !doctorCompletedServiceLinesOnly) {
             throw new common_1.BadRequestException({
                 message: `Cannot modify scheduling or pricing of an appointment in '${appt.status}' status`,
                 code: 'APPOINTMENT_NOT_EDITABLE',
@@ -405,7 +415,7 @@ let AppointmentsService = AppointmentsService_1 = class AppointmentsService {
             role: auth.role,
         });
         const updated = await this.prisma.$transaction(async (tx) => {
-            if (isStructuralChange) {
+            if (isStructuralChange && !doctorCompletedServiceLinesOnly) {
                 await this.assertBookableSlotTx(tx, {
                     tenantId: auth.tenantId,
                     doctorId,
@@ -603,6 +613,10 @@ let AppointmentsService = AppointmentsService_1 = class AppointmentsService {
         else if (appt.status === client_1.AppointmentStatus.arrived) {
             message = `طلب من الطبيب (${doctorName}): إدخال المريض للمعاينة — ${patientName}`;
             actions = ['send_to_doctor', 'dismiss'];
+        }
+        else if (appt.status === client_1.AppointmentStatus.completed) {
+            message = `طلب من الطبيب (${doctorName}): جاهز للتحصيل بعد مراجعة الفاتورة — ${patientName}`;
+            actions = ['dismiss'];
         }
         else {
             throw new common_1.BadRequestException({

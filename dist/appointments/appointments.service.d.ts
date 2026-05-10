@@ -68,14 +68,14 @@ export declare class AppointmentsService {
     finalizeSession(auth: AuthContext, id: string, dto: FinalizeSessionDto): Promise<{
         patient: {
             id: string;
-            name: string;
+            tenantId: string;
+            notes: string | null;
             createdAt: Date;
             updatedAt: Date;
             deletedAt: Date | null;
-            tenantId: string;
+            name: string;
             phone: string;
             dob: Date | null;
-            notes: string | null;
             sex: import("@prisma/client").$Enums.PatientSex;
             bloodType: string;
             recordStatus: import("@prisma/client").$Enums.PatientRecordStatus;
@@ -86,13 +86,13 @@ export declare class AppointmentsService {
         };
         service: {
             id: string;
-            name: string;
+            tenantId: string;
+            doctorId: string | null;
             createdAt: Date;
             updatedAt: Date;
             deletedAt: Date | null;
-            tenantId: string;
+            name: string;
             active: boolean;
-            doctorId: string | null;
             price: Prisma.Decimal;
             durationMinutes: number;
             category: string;
@@ -100,31 +100,46 @@ export declare class AppointmentsService {
         };
         session: {
             id: string;
-            status: import("@prisma/client").$Enums.SessionStatus;
-            createdAt: Date;
-            updatedAt: Date;
-            deletedAt: Date | null;
             tenantId: string;
-            doctorId: string;
             patientId: string;
+            doctorId: string;
             finalTotal: Prisma.Decimal | null;
             consentObtained: boolean;
             treatmentDetails: string | null;
             doctorRemarks: string | null;
             specialConditions: string | null;
+            status: import("@prisma/client").$Enums.SessionStatus;
+            createdAt: Date;
+            updatedAt: Date;
+            deletedAt: Date | null;
             appointmentId: string;
             startedAt: Date;
             finalizedAt: Date | null;
         } | null;
+        doctor: {
+            id: string;
+            tenantId: string;
+            createdAt: Date;
+            updatedAt: Date;
+            deletedAt: Date | null;
+            name: string;
+            active: boolean;
+            title: string | null;
+            email: string;
+            passwordHash: string;
+            role: import("@prisma/client").$Enums.UserRole;
+            doctorCode: string | null;
+            featureOverrides: Prisma.JsonValue | null;
+        };
         invoices: {
             id: string;
+            tenantId: string;
+            patientId: string;
+            discount: Prisma.Decimal;
             status: import("@prisma/client").$Enums.InvoiceStatus;
             createdAt: Date;
             updatedAt: Date;
             deletedAt: Date | null;
-            tenantId: string;
-            patientId: string;
-            discount: Prisma.Decimal;
             appointmentId: string;
             invoiceNumber: string | null;
             totalAmount: Prisma.Decimal;
@@ -133,31 +148,16 @@ export declare class AppointmentsService {
             totalPaid: Prisma.Decimal;
             balance: Prisma.Decimal;
         }[];
-        doctor: {
-            id: string;
-            name: string;
-            createdAt: Date;
-            updatedAt: Date;
-            deletedAt: Date | null;
-            tenantId: string;
-            title: string | null;
-            email: string;
-            passwordHash: string;
-            role: import("@prisma/client").$Enums.UserRole;
-            active: boolean;
-            doctorCode: string | null;
-            featureOverrides: Prisma.JsonValue | null;
-        };
         appointmentServices: ({
             service: {
                 id: string;
-                name: string;
+                tenantId: string;
+                doctorId: string | null;
                 createdAt: Date;
                 updatedAt: Date;
                 deletedAt: Date | null;
-                tenantId: string;
+                name: string;
                 active: boolean;
-                doctorId: string | null;
                 price: Prisma.Decimal;
                 durationMinutes: number;
                 category: string;
@@ -165,9 +165,9 @@ export declare class AppointmentsService {
             };
         } & {
             id: string;
+            serviceId: string;
             createdAt: Date;
             updatedAt: Date;
-            serviceId: string;
             appointmentId: string;
             quantity: number;
             unitPrice: Prisma.Decimal;
@@ -175,22 +175,17 @@ export declare class AppointmentsService {
         })[];
         media: {
             id: string;
-            createdAt: Date;
             tenantId: string;
+            createdAt: Date;
             appointmentId: string;
             label: string;
             imageUrl: string;
         }[];
     } & {
         id: string;
-        status: import("@prisma/client").$Enums.AppointmentStatus;
-        createdAt: Date;
-        updatedAt: Date;
-        deletedAt: Date | null;
         tenantId: string;
-        notes: string | null;
-        doctorId: string;
         patientId: string;
+        doctorId: string;
         serviceId: string;
         baseTotal: Prisma.Decimal;
         discount: Prisma.Decimal;
@@ -200,21 +195,26 @@ export declare class AppointmentsService {
         treatmentDetails: string | null;
         doctorRemarks: string | null;
         specialConditions: string | null;
+        status: import("@prisma/client").$Enums.AppointmentStatus;
         startTime: Date;
         endTime: Date;
         overbooked: boolean;
+        notes: string | null;
+        createdAt: Date;
+        updatedAt: Date;
+        deletedAt: Date | null;
     }>;
     createNextSession(auth: AuthContext, id: string, dto: CreateNextSessionDto): Promise<({
         patient: {
             id: string;
-            name: string;
+            tenantId: string;
+            notes: string | null;
             createdAt: Date;
             updatedAt: Date;
             deletedAt: Date | null;
-            tenantId: string;
+            name: string;
             phone: string;
             dob: Date | null;
-            notes: string | null;
             sex: import("@prisma/client").$Enums.PatientSex;
             bloodType: string;
             recordStatus: import("@prisma/client").$Enums.PatientRecordStatus;
@@ -225,13 +225,13 @@ export declare class AppointmentsService {
         };
         service: {
             id: string;
-            name: string;
+            tenantId: string;
+            doctorId: string | null;
             createdAt: Date;
             updatedAt: Date;
             deletedAt: Date | null;
-            tenantId: string;
+            name: string;
             active: boolean;
-            doctorId: string | null;
             price: Prisma.Decimal;
             durationMinutes: number;
             category: string;
@@ -239,47 +239,47 @@ export declare class AppointmentsService {
         };
         session: {
             id: string;
-            status: import("@prisma/client").$Enums.SessionStatus;
-            createdAt: Date;
-            updatedAt: Date;
-            deletedAt: Date | null;
             tenantId: string;
-            doctorId: string;
             patientId: string;
+            doctorId: string;
             finalTotal: Prisma.Decimal | null;
             consentObtained: boolean;
             treatmentDetails: string | null;
             doctorRemarks: string | null;
             specialConditions: string | null;
+            status: import("@prisma/client").$Enums.SessionStatus;
+            createdAt: Date;
+            updatedAt: Date;
+            deletedAt: Date | null;
             appointmentId: string;
             startedAt: Date;
             finalizedAt: Date | null;
         } | null;
         doctor: {
             id: string;
-            name: string;
+            tenantId: string;
             createdAt: Date;
             updatedAt: Date;
             deletedAt: Date | null;
-            tenantId: string;
+            name: string;
+            active: boolean;
             title: string | null;
             email: string;
             passwordHash: string;
             role: import("@prisma/client").$Enums.UserRole;
-            active: boolean;
             doctorCode: string | null;
             featureOverrides: Prisma.JsonValue | null;
         };
         appointmentServices: ({
             service: {
                 id: string;
-                name: string;
+                tenantId: string;
+                doctorId: string | null;
                 createdAt: Date;
                 updatedAt: Date;
                 deletedAt: Date | null;
-                tenantId: string;
+                name: string;
                 active: boolean;
-                doctorId: string | null;
                 price: Prisma.Decimal;
                 durationMinutes: number;
                 category: string;
@@ -287,9 +287,9 @@ export declare class AppointmentsService {
             };
         } & {
             id: string;
+            serviceId: string;
             createdAt: Date;
             updatedAt: Date;
-            serviceId: string;
             appointmentId: string;
             quantity: number;
             unitPrice: Prisma.Decimal;
@@ -297,14 +297,9 @@ export declare class AppointmentsService {
         })[];
     } & {
         id: string;
-        status: import("@prisma/client").$Enums.AppointmentStatus;
-        createdAt: Date;
-        updatedAt: Date;
-        deletedAt: Date | null;
         tenantId: string;
-        notes: string | null;
-        doctorId: string;
         patientId: string;
+        doctorId: string;
         serviceId: string;
         baseTotal: Prisma.Decimal;
         discount: Prisma.Decimal;
@@ -314,21 +309,28 @@ export declare class AppointmentsService {
         treatmentDetails: string | null;
         doctorRemarks: string | null;
         specialConditions: string | null;
+        status: import("@prisma/client").$Enums.AppointmentStatus;
         startTime: Date;
         endTime: Date;
         overbooked: boolean;
+        notes: string | null;
+        createdAt: Date;
+        updatedAt: Date;
+        deletedAt: Date | null;
     })[]>;
     addMedia(auth: AuthContext, id: string, dto: AddAppointmentMediaDto): Promise<{
         id: string;
-        createdAt: Date;
         tenantId: string;
+        createdAt: Date;
         appointmentId: string;
         label: string;
         imageUrl: string;
     }>;
     markNoShows(delayMinutes?: number): Promise<number>;
     markNoShowsForTenant(tenantId: string, cutoff?: Date): Promise<number>;
-    remove(auth: AuthContext, id: string): Promise<Prisma.BatchPayload>;
+    remove(auth: AuthContext, id: string): Promise<{
+        count: number;
+    }>;
     private normalizeDate;
     private parseDateOnly;
     private assertBookableSlotTx;
