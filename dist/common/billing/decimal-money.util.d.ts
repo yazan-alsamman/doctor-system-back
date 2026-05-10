@@ -1,0 +1,13 @@
+import { Prisma } from "@prisma/client";
+export declare const d0: () => Prisma.Decimal;
+export declare function money(v: Prisma.Decimal | string | number | null | undefined): Prisma.Decimal;
+export declare function dSum(vals: Prisma.Decimal[]): Prisma.Decimal;
+export declare function dEq(a: Prisma.Decimal, b: Prisma.Decimal, epsilon?: Prisma.Decimal): boolean;
+export declare function dGt(a: Prisma.Decimal, b: Prisma.Decimal): boolean;
+export declare function dGte(a: Prisma.Decimal, b: Prisma.Decimal): boolean;
+export declare function dLt(a: Prisma.Decimal, b: Prisma.Decimal): boolean;
+export declare function dLte(a: Prisma.Decimal, b: Prisma.Decimal): boolean;
+export declare function dMin(a: Prisma.Decimal, b: Prisma.Decimal): Prisma.Decimal;
+export declare function dMax(a: Prisma.Decimal, b: Prisma.Decimal): Prisma.Decimal;
+export declare function dClampLower(value: Prisma.Decimal, min: Prisma.Decimal): Prisma.Decimal;
+export declare function dDiv(a: Prisma.Decimal, b: Prisma.Decimal): Prisma.Decimal;

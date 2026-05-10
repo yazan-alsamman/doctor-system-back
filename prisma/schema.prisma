@@ -1,0 +1,465 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum TenantStatus {
+  active
+  suspended
+  trial
+}
+
+enum SubscriptionStatus {
+  active
+  expired
+  trial
+}
+
+enum Plan {
+  basic
+  pro
+}
+
+enum UserRole {
+  admin
+  doctor
+  receptionist
+  super_admin
+}
+
+enum AppointmentStatus {
+  scheduled
+  confirmed
+  arrived
+  in_consultation
+  completed
+  paid
+  no_show
+  cancelled
+}
+
+enum InvoiceStatus {
+  draft
+  paid
+  partial
+  cancelled
+}
+
+enum PaymentMethod {
+  cash
+  card
+  transfer
+  other
+}
+
+enum PackageStatus {
+  active
+  completed
+  expired
+}
+
+enum SessionStatus {
+  in_progress
+  finalized
+}
+
+enum NotificationSeverity {
+  info
+  warning
+  critical
+}
+
+enum PatientSex {
+  male
+  female
+}
+
+enum PatientRecordStatus {
+  new
+  active
+  inactive
+}
+
+model Tenant {
+  id                   String              @id @default(uuid())
+  name                 String
+  status               TenantStatus        @default(trial)
+  plan                 Plan                @default(basic)
+  subscriptionStatus   SubscriptionStatus  @default(trial)
+  nextBillingDate      DateTime?
+  // Per-tenant invoice sequence counter — incremented atomically on each invoice creation
+  invoiceSeq           Int                 @default(0)
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  deletedAt            DateTime?
+
+  users        User[]
+  patients     Patient[]
+  services     Service[]
+  appointments Appointment[]
+  sessions     Session[]
+  invoices     Invoice[]
+  schedules    DoctorSchedule[]
+  domainEvents DomainEvent[]
+  auditLogs    AuditLog[]
+  notifications Notification[]
+  idempotencyRecords IdempotencyRecord[]
+}
+
+model User {
+  id           String   @id @default(uuid())
+  tenantId     String
+  name         String
+  title        String?
+  email        String
+  passwordHash String
+  role         UserRole
+  active       Boolean  @default(true)
+  doctorCode   String?
+  featureOverrides Json?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  deletedAt    DateTime?
+
+  tenant                  Tenant           @relation(fields: [tenantId], references: [id])
+  appointmentsAsDoctor    Appointment[]    @relation("DoctorAppointments")
+  doctorSchedules         DoctorSchedule[]
+  notifications           Notification[]
+
+  @@unique([tenantId, email])
+  @@index([tenantId])
+}
+
+model Patient {
+  id        String   @id @default(uuid())
+  tenantId  String
+  name      String
+  phone     String
+  dob       DateTime?
+  notes     String?
+  sex       PatientSex          @default(male)
+  bloodType String              @default("O+")
+  recordStatus PatientRecordStatus @default(new)
+  ageYears  Int?
+  allergies String[]            @default([])
+  medications Json?
+  vitals    Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  tenant       Tenant        @relation(fields: [tenantId], references: [id])
+  appointments Appointment[]
+  invoices     Invoice[]
+  packages     PatientPackage[]
+
+  @@index([tenantId])
+  @@index([tenantId, phone])
+}
+
+model Service {
+  id              String   @id @default(uuid())
+  tenantId        String
+  doctorId        String?
+  name            String
+  // Decimal to avoid floating-point money errors
+  price           Decimal  @db.Decimal(10, 2)
+  durationMinutes Int
+  category        String   @default("general")
+  aliases         String[]
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  deletedAt       DateTime?
+
+  tenant       Tenant        @relation(fields: [tenantId], references: [id])
+  appointments Appointment[]
+  appointmentServices AppointmentService[]
+  patientPackages PatientPackage[]
+
+  @@index([tenantId])
+  @@index([tenantId, doctorId])
+}
+
+model Appointment {
+  id         String            @id @default(uuid())
+  tenantId   String
+  patientId  String
+  doctorId   String
+  serviceId  String
+  baseTotal  Decimal           @default(0) @db.Decimal(10, 2)
+  discount   Decimal           @default(0) @db.Decimal(10, 2)
+  finalTotal Decimal           @default(0) @db.Decimal(10, 2)
+  manualPriceOverride Decimal? @db.Decimal(10, 2)
+  consentObtained Boolean      @default(false)
+  treatmentDetails String?
+  doctorRemarks   String?
+  specialConditions String?
+  status     AppointmentStatus @default(scheduled)
+  startTime  DateTime
+  endTime    DateTime
+  overbooked Boolean           @default(false)
+  notes      String?
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+  deletedAt  DateTime?
+
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  patient     Patient  @relation(fields: [patientId], references: [id])
+  doctor      User     @relation("DoctorAppointments", fields: [doctorId], references: [id])
+  service     Service  @relation(fields: [serviceId], references: [id])
+  invoices    Invoice[]
+  appointmentServices AppointmentService[]
+  media       AppointmentMedia[]
+  session     Session?
+
+  @@index([tenantId])
+  @@index([tenantId, doctorId, startTime])
+  @@index([tenantId, status, startTime])
+  @@index([patientId])
+}
+
+model Session {
+  id            String        @id @default(uuid())
+  tenantId      String
+  appointmentId String        @unique
+  patientId     String
+  doctorId      String
+  status        SessionStatus @default(in_progress)
+  startedAt     DateTime      @default(now())
+  finalizedAt   DateTime?
+  consentObtained Boolean     @default(false)
+  treatmentDetails String?
+  doctorRemarks   String?
+  specialConditions String?
+  finalTotal    Decimal?      @db.Decimal(10, 2)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  deletedAt     DateTime?
+
+  tenant      Tenant      @relation(fields: [tenantId], references: [id])
+  appointment Appointment @relation(fields: [appointmentId], references: [id])
+
+  @@index([tenantId, doctorId, status])
+  @@index([tenantId, patientId, createdAt])
+}
+
+model Invoice {
+  id            String        @id @default(uuid())
+  tenantId      String
+  patientId     String
+  appointmentId String
+  // Human-readable sequential number per tenant (e.g. INV-2026-00042)
+  invoiceNumber String?
+  totalAmount   Decimal       @db.Decimal(10, 2)
+  discount      Decimal       @default(0) @db.Decimal(10, 2)
+  finalAmount   Decimal       @db.Decimal(10, 2)
+  /// Package/session credits subtracted from appointment.finalTotal when this invoice was issued (stable for re-sync).
+  packageAdjustment Decimal   @default(0) @db.Decimal(10, 2)
+  status        InvoiceStatus @default(draft)
+  totalPaid     Decimal       @default(0) @db.Decimal(10, 2)
+  balance       Decimal       @default(0) @db.Decimal(10, 2)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  deletedAt     DateTime?
+
+  tenant      Tenant      @relation(fields: [tenantId], references: [id])
+  patient     Patient     @relation(fields: [patientId], references: [id])
+  appointment Appointment @relation(fields: [appointmentId], references: [id])
+  payments    Payment[]
+
+  @@index([appointmentId])
+  @@unique([tenantId, invoiceNumber])
+  @@index([tenantId])
+  @@index([tenantId, status, createdAt])
+}
+
+model DoctorSchedule {
+  id         String   @id @default(uuid())
+  tenantId   String
+  doctorId   String
+  dayOfWeek  Int
+  startTime  String
+  endTime    String
+  breakStart String?
+  breakEnd   String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  deletedAt  DateTime?
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  doctor User   @relation(fields: [doctorId], references: [id])
+
+  // Enforce one schedule row per doctor per day — use upsert to update
+  @@unique([tenantId, doctorId, dayOfWeek])
+  @@index([tenantId])
+}
+
+model AppointmentService {
+  id            String   @id @default(uuid())
+  appointmentId String
+  serviceId     String
+  quantity      Int      @default(1)
+  unitPrice     Decimal  @db.Decimal(10, 2)
+  lineTotal     Decimal  @db.Decimal(10, 2)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  appointment Appointment @relation(fields: [appointmentId], references: [id])
+  service     Service     @relation(fields: [serviceId], references: [id])
+
+  @@index([appointmentId])
+  @@index([serviceId])
+}
+
+model AppointmentMedia {
+  id            String   @id @default(uuid())
+  tenantId      String
+  appointmentId String
+  label         String
+  imageUrl      String
+  createdAt     DateTime @default(now())
+
+  appointment Appointment @relation(fields: [appointmentId], references: [id])
+
+  @@index([tenantId, appointmentId])
+}
+
+model PatientPackage {
+  id                String        @id @default(uuid())
+  tenantId          String
+  patientId         String
+  serviceId         String
+  totalSessions     Int
+  remainingSessions Int
+  // Price locked at time of purchase — not affected by later service price changes
+  pricePerSession   Decimal       @db.Decimal(10, 2)
+  expiresAt         DateTime?
+  status            PackageStatus @default(active)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  deletedAt         DateTime?
+
+  patient Patient @relation(fields: [patientId], references: [id])
+  service Service @relation(fields: [serviceId], references: [id])
+
+  @@index([tenantId, patientId])
+  @@index([tenantId, serviceId])
+}
+
+model Payment {
+  id             String        @id @default(uuid())
+  tenantId       String
+  invoiceId      String
+  amount         Decimal       @db.Decimal(10, 2)
+  method         PaymentMethod @default(cash)
+  reference      String?
+  // Client-supplied key for idempotent retries — duplicate key returns the existing payment
+  idempotencyKey String?       @unique
+  // Non-null when this payment has been voided (reversed)
+  voidedAt       DateTime?
+  createdAt      DateTime      @default(now())
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id])
+  refunds Refund[]
+
+  @@index([tenantId, invoiceId])
+}
+
+/// Cash-back / card refund ledger — does not mutate invoice totals (use payment void for accounting reversal).
+model Refund {
+  id          String   @id @default(uuid())
+  tenantId    String
+  paymentId   String
+  amount      Decimal  @db.Decimal(10, 2)
+  reason      String?
+  actorUserId String?
+  createdAt   DateTime @default(now())
+
+  payment Payment @relation(fields: [paymentId], references: [id])
+
+  @@index([tenantId, paymentId])
+}
+
+model DomainEvent {
+  id            String   @id @default(uuid())
+  tenantId      String
+  aggregateType String
+  aggregateId   String
+  eventType     String
+  payload       Json?
+  createdAt     DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId, aggregateType, aggregateId, createdAt])
+  @@index([tenantId, eventType, createdAt])
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  tenantId    String
+  actorUserId String?
+  action      String
+  entityType  String
+  entityId    String
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId, entityType, entityId, createdAt])
+  @@index([tenantId, action, createdAt])
+}
+
+/// Stores idempotent HTTP mutation results for safe offline/online replay (same key + same body → same response).
+model IdempotencyRecord {
+  id              String   @id @default(uuid())
+  tenantId        String
+  actorUserId     String
+  idempotencyKey  String
+  requestMethod   String
+  requestPath     String
+  /// SHA-256 of canonical request body (operation-specific payload in batch).
+  requestHash     String
+  responseStatus  Int
+  responseBody    Json?
+  createdAt       DateTime @default(now())
+  expiresAt       DateTime
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, actorUserId, idempotencyKey])
+  @@index([tenantId, expiresAt])
+}
+
+model PlatformAuditLog {
+  id             String   @id @default(uuid())
+  actorUserId    String?
+  action         String
+  targetTenantId String?
+  metadata       Json?
+  createdAt      DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([targetTenantId, createdAt])
+  @@index([action, createdAt])
+}
+
+model Notification {
+  id        String               @id @default(uuid())
+  tenantId  String
+  userId    String
+  type      NotificationSeverity @default(info)
+  message   String
+  read      Boolean              @default(false)
+  createdAt DateTime             @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@index([tenantId, userId, read, createdAt])
+}

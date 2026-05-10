@@ -1,0 +1,172 @@
+import { Prisma } from "@prisma/client";
+import { PrismaService } from '../database/prisma.service';
+import { InvoicesService } from '../invoices/invoices.service';
+import { AuthContext } from '../common/auth-context';
+import type { FinalizeSessionDto } from '../appointments/dto/finalize-session.dto';
+import { DomainEventsService } from '../common/events/domain-events.service';
+import { AuditLogService } from '../common/audit/audit-log.service';
+export declare class SessionLifecycleService {
+    private readonly prisma;
+    private readonly invoicesService;
+    private readonly domainEvents;
+    private readonly auditLog;
+    constructor(prisma: PrismaService, invoicesService: InvoicesService, domainEvents: DomainEventsService, auditLog: AuditLogService);
+    finalizeSession(auth: AuthContext, id: string, dto: FinalizeSessionDto): Promise<{
+        patient: {
+            id: string;
+            name: string;
+            createdAt: Date;
+            updatedAt: Date;
+            deletedAt: Date | null;
+            tenantId: string;
+            phone: string;
+            dob: Date | null;
+            notes: string | null;
+            sex: import("@prisma/client").$Enums.PatientSex;
+            bloodType: string;
+            recordStatus: import("@prisma/client").$Enums.PatientRecordStatus;
+            ageYears: number | null;
+            allergies: string[];
+            medications: Prisma.JsonValue | null;
+            vitals: Prisma.JsonValue | null;
+        };
+        service: {
+            id: string;
+            name: string;
+            createdAt: Date;
+            updatedAt: Date;
+            deletedAt: Date | null;
+            tenantId: string;
+            active: boolean;
+            doctorId: string | null;
+            price: Prisma.Decimal;
+            durationMinutes: number;
+            category: string;
+            aliases: string[];
+        };
+        session: {
+            id: string;
+            status: import("@prisma/client").$Enums.SessionStatus;
+            createdAt: Date;
+            updatedAt: Date;
+            deletedAt: Date | null;
+            tenantId: string;
+            doctorId: string;
+            patientId: string;
+            finalTotal: Prisma.Decimal | null;
+            consentObtained: boolean;
+            treatmentDetails: string | null;
+            doctorRemarks: string | null;
+            specialConditions: string | null;
+            appointmentId: string;
+            startedAt: Date;
+            finalizedAt: Date | null;
+        } | null;
+        invoices: {
+            id: string;
+            status: import("@prisma/client").$Enums.InvoiceStatus;
+            createdAt: Date;
+            updatedAt: Date;
+            deletedAt: Date | null;
+            tenantId: string;
+            patientId: string;
+            discount: Prisma.Decimal;
+            appointmentId: string;
+            invoiceNumber: string | null;
+            totalAmount: Prisma.Decimal;
+            finalAmount: Prisma.Decimal;
+            packageAdjustment: Prisma.Decimal;
+            totalPaid: Prisma.Decimal;
+            balance: Prisma.Decimal;
+        }[];
+        doctor: {
+            id: string;
+            name: string;
+            createdAt: Date;
+            updatedAt: Date;
+            deletedAt: Date | null;
+            tenantId: string;
+            title: string | null;
+            email: string;
+            passwordHash: string;
+            role: import("@prisma/client").$Enums.UserRole;
+            active: boolean;
+            doctorCode: string | null;
+            featureOverrides: Prisma.JsonValue | null;
+        };
+        appointmentServices: ({
+            service: {
+                id: string;
+                name: string;
+                createdAt: Date;
+                updatedAt: Date;
+                deletedAt: Date | null;
+                tenantId: string;
+                active: boolean;
+                doctorId: string | null;
+                price: Prisma.Decimal;
+                durationMinutes: number;
+                category: string;
+                aliases: string[];
+            };
+        } & {
+            id: string;
+            createdAt: Date;
+            updatedAt: Date;
+            serviceId: string;
+            appointmentId: string;
+            quantity: number;
+            unitPrice: Prisma.Decimal;
+            lineTotal: Prisma.Decimal;
+        })[];
+        media: {
+            id: string;
+            createdAt: Date;
+            tenantId: string;
+            appointmentId: string;
+            label: string;
+            imageUrl: string;
+        }[];
+    } & {
+        id: string;
+        status: import("@prisma/client").$Enums.AppointmentStatus;
+        createdAt: Date;
+        updatedAt: Date;
+        deletedAt: Date | null;
+        tenantId: string;
+        notes: string | null;
+        doctorId: string;
+        patientId: string;
+        serviceId: string;
+        baseTotal: Prisma.Decimal;
+        discount: Prisma.Decimal;
+        finalTotal: Prisma.Decimal;
+        manualPriceOverride: Prisma.Decimal | null;
+        consentObtained: boolean;
+        treatmentDetails: string | null;
+        doctorRemarks: string | null;
+        specialConditions: string | null;
+        startTime: Date;
+        endTime: Date;
+        overbooked: boolean;
+    }>;
+    applyCompletionEffectsTx(tx: Prisma.TransactionClient, auth: AuthContext, appt: {
+        id: string;
+        patientId: string;
+        doctorId: string;
+        serviceId: string;
+        baseTotal: Prisma.Decimal;
+        discount: Prisma.Decimal;
+        finalTotal: Prisma.Decimal;
+        fallbackServicePrice: Prisma.Decimal;
+        serviceIds: string[];
+    }): Promise<void>;
+    getAppointmentServiceIds(appt: {
+        serviceId: string;
+        appointmentServices?: Array<{
+            serviceId: string;
+        }>;
+    }): string[];
+    private assertDoctorAccess;
+    private consumePackageSessionsTx;
+}

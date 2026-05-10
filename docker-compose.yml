@@ -1,0 +1,17 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: mediflow-postgres
+    restart: unless-stopped
+    # Host port must avoid Windows excluded ranges (this machine reserves ~5328–5527). Container still listens on 5432.
+    ports:
+      - "30432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: mediflow
+    volumes:
+      - mediflow_pgdata:/var/lib/postgresql/data
+
+volumes:
+  mediflow_pgdata:

@@ -1,0 +1,31 @@
+import { PrismaService } from '../../../database/prisma.service';
+import type { AuthContext } from '../../../common/auth-context';
+import { CopilotAuthorizationService } from '../v2/copilot-authorization.service';
+import { CopilotPolicyService } from '../v2/copilot-policy.service';
+import type { IntentType } from '../intent/intent.types';
+import type { ToolName, ToolResult } from './tool.types';
+export declare class ToolRegistryService {
+    private readonly prisma;
+    private readonly policy;
+    private readonly authz;
+    private readonly logger;
+    constructor(prisma: PrismaService, policy: CopilotPolicyService, authz: CopilotAuthorizationService);
+    executeForIntent(intent: IntentType, auth: AuthContext, params: Record<string, unknown>): Promise<ToolResult[]>;
+    private selectTools;
+    getSearchToolsForFallbackParams(params: Record<string, unknown>): ToolName[];
+    private finalizeSearchParams;
+    private selectSearchTools;
+    executeTool(name: ToolName, auth: AuthContext, params: Record<string, unknown>): Promise<ToolResult>;
+    private run;
+    private applyScopedParams;
+    private getAvailableSlots;
+    private getDoctorSchedule;
+    private detectConflicts;
+    private getPatientHistory;
+    private getPatientSummary;
+    private getInvoiceData;
+    private getRevenueStats;
+    private searchPatients;
+    private searchAppointments;
+    private searchInvoices;
+}

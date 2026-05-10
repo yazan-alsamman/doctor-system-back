@@ -1,0 +1,1 @@
+{"version":3,"file":"tenant-prisma.helper.js","sourceRoot":"","sources":["../../src/common/tenant-prisma.helper.ts"],"names":[],"mappings":";;AAAA,kCASC;AATD,SAAgB,WAAW,CACzB,QAAgB,EAChB,KAAS;IAET,OAAO;QACL,GAAG,CAAC,KAAK,IAAK,EAAQ,CAAC;QACvB,QAAQ;QACR,SAAS,EAAE,IAAI;KAChB,CAAC;AACJ,CAAC"}
