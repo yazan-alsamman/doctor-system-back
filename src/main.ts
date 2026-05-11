@@ -22,23 +22,54 @@ function errnoOf(err: unknown): string | undefined {
   return undefined;
 }
 
+/** Split comma-separated origin lists from env (hPanel / .env). */
+function parseCommaSeparatedOrigins(...values: (string | undefined)[]): string[] {
+  const origins: string[] = [];
+  for (const v of values) {
+    if (!v) continue;
+    for (const part of v.split(',')) {
+      const t = part.trim();
+      if (t) origins.push(t);
+    }
+  }
+  return origins;
+}
+
+/**
+ * Allowed browser origins for CORS. Merges hPanel variables with safe defaults:
+ * - `CORS_ORIGINS` and `FRONTEND_ORIGINS` (same names work in Hostinger hPanel).
+ * - Local Vite + production SPA (grey vs gray subdomain spelling).
+ */
+function buildAllowedCorsOrigins(): string[] {
+  const fromEnv = parseCommaSeparatedOrigins(
+    process.env.CORS_ORIGINS,
+    process.env.FRONTEND_ORIGINS,
+  );
+  const builtIn = [
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'https://lightslategrey-hamster-508054.hostingersite.com',
+    'https://lightslategray-hamster-508054.hostingersite.com',
+  ];
+  return [...new Set([...fromEnv, ...builtIn])];
+}
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.setGlobalPrefix('api');
-  // Restrict CORS to explicit frontend origins. Never use `origin: true` with credentials.
-  const rawOrigins = process.env.CORS_ORIGINS ?? 'http://localhost:5173,http://localhost:5174';
-  const allowedOrigins = rawOrigins.split(',').map((o) => o.trim()).filter(Boolean);
+  // Static allowlist (no origin callback errors) — required for credentialed / JSON preflights.
+  const allowedOrigins = buildAllowedCorsOrigins();
   app.enableCors({
-    origin: (requestOrigin, callback) => {
-      if (!requestOrigin || allowedOrigins.includes(requestOrigin)) {
-        callback(null, true);
-      } else {
-        callback(new Error(`Origin '${requestOrigin}' is not allowed by CORS policy`));
-      }
-    },
+    origin: allowedOrigins,
     credentials: true,
-    methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Idempotency-Key', 'X-Idempotency-Key'],
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'X-Tenant-Id',
+      'Idempotency-Key',
+      'X-Idempotency-Key',
+    ],
   });
   app.useGlobalFilters(new HttpErrorFilter());
   app.useGlobalInterceptors(new ResponseEnvelopeInterceptor());
