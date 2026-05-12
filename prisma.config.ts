@@ -3,6 +3,13 @@
 import "dotenv/config";
 import { defineConfig } from "prisma/config";
 
+/** CLI (migrate, db push): prefer DIRECT_URL so Neon pooler does not break migrations. Runtime uses DATABASE_URL in prisma.service.ts. */
+function migrateDatabaseUrl(): string {
+  const direct = process.env["DIRECT_URL"]?.trim();
+  const pooled = process.env["DATABASE_URL"]?.trim();
+  return direct || pooled || "";
+}
+
 export default defineConfig({
   schema: "prisma/schema.prisma",
   migrations: {
@@ -10,6 +17,6 @@ export default defineConfig({
     seed: "npm run prisma:seed",
   },
   datasource: {
-    url: process.env["DATABASE_URL"],
+    url: migrateDatabaseUrl(),
   },
 });

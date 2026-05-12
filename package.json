@@ -22,7 +22,10 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "ts-node src/prisma/seed.ts",
-    "db:up": "docker compose up -d"
+    "db:up": "docker compose up -d",
+    "neon:connection-strings": "npx neonctl@latest connection-string production --project-id steep-fire-23922548 --pooled --no-color && npx neonctl@latest connection-string production --project-id steep-fire-23922548 --no-color",
+    "db:push": "prisma db push",
+    "db:migrate:deploy": "prisma migrate deploy"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
